@@ -27,7 +27,7 @@ Este projeto de engenharia de dados envolve a extração de dados de uma API, a 
      - Integração nativa com arquivos Parquet, permitindo consultas eficientes.
 
 #### Fluxo de Trabalho
-![Example architecture image](example-architecture.png)
+![Example architecture image](example_architecture.png)
 
 1. **Extração de Dados da API para o S3**:
    - O primeiro script da DAG do Airflow faz uma requisição a uma API, coleta os dados e os grava em um bucket S3. Este passo garante que os dados brutos sejam armazenados de forma durável e acessível.
