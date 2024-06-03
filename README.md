@@ -5,18 +5,12 @@ Este projeto de engenharia de dados envolve a extração de dados de uma API, a 
 ### Data Architecture
 #### Componentes da Arquitetura
 
-1. **Apache Airflow**:
+1. **Apache Airflow Gerenciado pela AWS**:
    - **Função**: Orquestração das tarefas de ETL.
    - **Vantagens**:
      - Permite a criação de DAGs que definem a ordem e as dependências das tarefas.
      - Facilita a gestão de agendamento e monitoramento de workflows complexos.
      - Possui uma interface web intuitiva para acompanhamento das execuções.
-
-2. **Docker**:
-   - **Função**: Execução dos scripts em um ambiente isolado e padronizado.
-   - **Vantagens**:
-     - Facilita a portabilidade e replicação do ambiente.
-     - Simplifica o gerenciamento de dependências e versões de bibliotecas.
 
 3. **Amazon S3**:
    - **Função**: Armazenamento intermediário dos dados extraídos da API e dos arquivos transformados.
@@ -53,34 +47,5 @@ Este projeto de engenharia de dados envolve a extração de dados de uma API, a 
 - **Custo-eficiência**: S3 proporciona armazenamento econômico e o uso de PySpark em ambientes gerenciados pode ser ajustado conforme a necessidade, otimizando custos operacionais.
 
 Essa arquitetura representa uma solução robusta e eficiente para projetos de ETL e transformação de dados, combinando o melhor das ferramentas de orquestração, armazenamento, processamento e contêineres.
-
-### Data Visualization
-The aggregated view can be visialized querying the data lake on AWS with a simple select command. You should find the following:
-
-![Example dashboard image](example-dashboard.png)
-
-## Prerequisites
-
-Directions or anything needed before running the project.
-
-- Docker and Docker compose to running solution
-- Having an AWS account and AWS CLI installed to create buckets
-
-## How to Run This Project
-
-Replace the example step-by-step instructions with your own.
-
-1. Criar buckets
-2. Criar variáveis no airflow
-3. Make sure it's running properly by checking z
-4. 
-
-docker compose up -d --build
-
-## Monitoring and allerting
-
-It's good to reflect on what you learned throughout the process of building this project. Here you might discuss what you would have done differently if you had more time/money/data. Did you end up choosing the right tools or would you try something else next time?
-
-## Contact
-
-Please feel free to contact me if you have any questions at: LinkedIn, Twitter
+## Proposição em  Monitoramento e alerta
+Pensando nas execuçöes e na visualização feitas pelo ambiente gerenciado do apache airflow, os dados das execuçoes seriam coletados via cloudtrail, junto com os logs, armazenados em tópicos sns como eventos, gerados para tópicos SQS e por uma lambda, seriam colocados numa fila e armazenados em outro bucket pela lambda, dessa forma, falhas durante o processo seriam notificadas e haveria uma compreensão dos possíveis eventos de erro ao longo de todo o workflow. 
