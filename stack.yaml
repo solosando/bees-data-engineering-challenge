@@ -1,0 +1,153 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+
+  MyS3BucketBronze:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "ariel-lake-bronze-layer"
+
+  MyS3BucketSilver:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "ariel-lake-silver-layer"
+
+  MyS3BucketGold:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "ariel-lake-gold-layer"
+
+  MyDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: "dbcrawler"
+
+  GlueCrawler: 
+    Type: AWS::Glue::Crawler
+    Properties:
+      DatabaseName: !Ref MyDatabase
+      Name: view_crawler
+      Role: !GetAtt GlueServiceRole.Arn
+      SchemaChangePolicy: 
+        UpdateBehavior: "UPDATE_IN_DATABASE"
+        DeleteBehavior: "LOG"
+      Targets: 
+        S3Targets:
+          - Path: 's3://ariel-lake-gold-layer/views.parquet'
+
+
+  GlueWorkflow:
+    Type: AWS::Glue::Workflow
+    Properties: 
+      Name: MyGlueWorkflow
+      DefaultRunProperties: {
+        "BRONZE_BUCKET": 'ariel-lake-bronze-layer',
+        "API_URL": 'https://api.openbrewerydb.org/breweries',
+        "OBJ_KEY": 'breweries',
+        "GOLD_BUCKET": 'ariel-lake-gold-layer',
+        "SILVER_BUCKET": 'ariel-lake-silver-layer',
+        "CRAWLER_NAME": 'view_crawler'
+        }  
+
+  ConvertJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: ConvertJob
+      Role: !GetAtt GlueServiceRole.Arn
+      Command:
+        Name: glueetl
+        ScriptLocation: s3://glue-scripts-ariel/convert.py
+        PythonVersion: '3'
+      DefaultArguments:
+        "--TempDir": s3://glue-scripts-temp-ariel/
+        "--additional-python-modules": glue
+
+  ExtractJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: ExtractJob
+      Role: !GetAtt GlueServiceRole.Arn
+      Command:
+        Name: glueetl
+        ScriptLocation: s3://glue-scripts-ariel/extract.py
+        PythonVersion: '3'
+      DefaultArguments:
+        "--TempDir": s3://glue-scripts-temp-ariel/
+        "--additional-python-modules": glue
+
+  VisualizeJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: VisualizeJob
+      Role: !GetAtt GlueServiceRole.Arn
+      Command:
+        Name: glueetl
+        ScriptLocation: s3://glue-scripts-ariel/visualize.py
+        PythonVersion: '3'
+      DefaultArguments:
+        "--TempDir": s3://glue-scripts-temp-ariel/
+        "--additional-python-modules": glue
+
+  TriggerExtractJob:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Name: TriggerExtractJob
+      Type: ON_DEMAND
+      Actions:
+        - JobName: !Ref ExtractJob
+      WorkflowName: !Ref GlueWorkflow
+
+  TriggerConvertJob:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Name: TriggerConvertJob
+      Type: CONDITIONAL
+      Actions:
+        - JobName: !Ref ConvertJob
+      Predicate:
+        Conditions:
+          - LogicalOperator: EQUALS
+            JobName: !Ref ExtractJob
+            State: SUCCEEDED
+      WorkflowName: !Ref GlueWorkflow
+
+  TriggerVisualizeJob:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Name: TriggerVisualizeJob
+      Type: CONDITIONAL
+      Actions:
+        - JobName: !Ref VisualizeJob
+      Predicate:
+        Conditions:
+          - LogicalOperator: EQUALS
+            JobName: !Ref ConvertJob
+            State: SUCCEEDED
+      WorkflowName: !Ref GlueWorkflow
+
+  GlueServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: GlueServicePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - glue:*
+                  - s3:*
+                  - cloudwatch:PutMetricData
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+  
