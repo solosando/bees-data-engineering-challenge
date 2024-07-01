@@ -1,31 +1,13 @@
-import sys
-import boto3
 import logging
 from pyspark.sql import SparkSession
-from awsglue.transforms import *
-from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
-from awsglue.context import GlueContext
-from awsglue.job import Job
 
-# Get job parameters
-glue_client = boto3.client("glue")
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "WORKFLOW_NAME", "WORKFLOW_RUN_ID"])
-workflow_name = args["WORKFLOW_NAME"]
-workflow_run_id = args["WORKFLOW_RUN_ID"]
-workflow_params = glue_client.get_workflow_run_properties(
-    Name=workflow_name, RunId=workflow_run_id
-)["RunProperties"]
-input_bucket = workflow_params["BRONZE_BUCKET"]
-input_key = workflow_params["OBJ_KEY"] + ".json"
-output_bucket = workflow_params["SILVER_BUCKET"]
-output_key = workflow_params["OBJ_KEY"] + ".parquet"
+input_bucket = "ariel-lake-bronze-layer"
+input_key = "breweries.json"
+output_bucket = "ariel-lake-silver-layer"
+output_key = "breweries.parquet"
 
-sc = SparkContext()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-job = Job(glueContext)
-job.init(args["JOB_NAME"], args)
+# Initialize Spark session
+spark = SparkSession.builder.appName("TransformJSONToParquet").getOrCreate()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -53,4 +35,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    job.commit()

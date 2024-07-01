@@ -3,18 +3,34 @@ import boto3
 import logging
 import time
 from pyspark.sql import SparkSession
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
 # Get job parameters
 glue_client = boto3.client("glue")
-input_bucket = "ariel-lake-silver-layer"
-output_bucket = "ariel-lake-gold-layer"
-input_key = "breweries.parquet"
-crawler_name = "view_crawler"
+args = getResolvedOptions(sys.argv, ["JOB_NAME", "WORKFLOW_NAME", "WORKFLOW_RUN_ID"])
+workflow_name = args["WORKFLOW_NAME"]
+workflow_run_id = args["WORKFLOW_RUN_ID"]
+workflow_params = glue_client.get_workflow_run_properties(
+    Name=workflow_name, RunId=workflow_run_id
+)["RunProperties"]
+input_bucket = workflow_params["SILVER_BUCKET"]
+output_bucket = workflow_params["GOLD_BUCKET"]
+input_key = workflow_params["OBJ_KEY"] + ".parquet"
+crawler_name = workflow_params["CRAWLER_NAME"]
 
-spark = SparkSession.builder.appName("CreateView").getOrCreate()
+# Initialize GlueContext
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args["JOB_NAME"], args)
 
 
 def create_aggregate_views(input_bucket: str, output_bucket: str):
@@ -36,7 +52,6 @@ def create_aggregate_views(input_bucket: str, output_bucket: str):
 
     except Exception as e:
         logging.error(f"An error occurred: {e}", exc_info=True)
-        raise  # Re-raise the exception to propagate it
 
 
 def start_crawler(crawler_name: str):
@@ -65,7 +80,6 @@ def start_crawler(crawler_name: str):
         logging.error(
             f"An error occurred while running the crawler: {e}", exc_info=True
         )
-        raise  # Re-raise the exception to propagate it
 
 
 def main():
@@ -75,3 +89,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    job.commit()
