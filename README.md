@@ -4,7 +4,7 @@ Este projeto de engenharia de dados envolve a extração de dados de uma API, a 
 
 ### Data Architecture
 #### Componentes da Arquitetura
-![Example architecture image](example_architecture.jpeg)
+![Example architecture image](example_architecture.png)
 
 1. **AWS Glue**:
    - **Função**: Orquestração e execução das tarefas de ETL.
@@ -62,4 +62,4 @@ você deve esperar esse output:
 ![Example test image](tests.png)
 
 ## Considerações finais
-Em caso de qualquer dúvida, não hesite em me contatar pelos links de email e linkedin que estão fixados no canto superior dessa página. 
+Em caso de qualquer dúvida, não hesite em me contatar pelos links de email e linkedin que estão fixados no canto superior da minha página inicial. 
